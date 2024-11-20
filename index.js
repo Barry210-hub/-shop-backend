@@ -424,6 +424,13 @@ console.log("popular fetch in list")
 res.send(popular_in_women);
 
 })
+//creating endpiont for new collection data
+app.get('/newcollections' , async(req,res)=>{
+    let products = await Product.find({});
+    let newcollection = products.slice(1).slice(-8);
+    console.log('NewCollections Fetched')
+    res.send(newcollection)
+})
 
 
 
