@@ -286,7 +286,6 @@
 // }) 
 
 
-const port = "4000";
 const express = require("express");
 const app = express();
 const mongoose = require('mongoose');
@@ -294,17 +293,15 @@ const jwt = require('jsonwebtoken');
 const multer = require("multer");
 const path = require('path');
 const cors = require('cors');
-const { console } = require("inspector");
 
+// Express Setup
 app.use(express.json());
 app.use(cors());
 
-// Database connection with MongoDB
-mongoose.connect("mongodb+srv://umarzafar49678:tnFd4aXn7BX5lllo@cluster1.bzyrj.mongodb.net/E-commerence");
-
-// Api CREATION
-app.get('/', (req, res) => {
-    res.send("Express App is Running ");
+// Database connection (MongoDB)
+mongoose.connect("mongodb+srv://umarzafar49678:tnFd4aXn7BX5lllo@cluster1.bzyrj.mongodb.net/E-commerence", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 });
 
 // Image Storage Engine (Updated to use /tmp directory in Vercel)
@@ -314,24 +311,31 @@ const storage = multer.diskStorage({
         cb(null, '/tmp/');
     },
     filename: function (req, file, cb) {
-        // Unique filename with timestamp to avoid overwriting
+        // Generate a unique filename
         cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`);
     }
 });
 
 const upload = multer({ storage: storage });
 
-// CREATING UPLOAD ENDPOINT FOR IMAGES
-app.use('/images', express.static('/tmp')); // Serving static files from /tmp
+// Serve images from /tmp directory
+app.use('/images', express.static('/tmp'));
+
+// API Route: Home route
+app.get('/', (req, res) => {
+    res.send("Express App is Running");
+});
+
+// Image Upload Endpoint
 app.post('/upload', upload.single('product'), (req, res) => {
-    // Return the image URL using /tmp directory path
+    // Return image URL
     res.json({
         success: 1,
-        image_url: `http://localhost:${port}/images/${req.file.filename}`
+        image_url: `http://localhost:4000/images/${req.file.filename}`
     });
 });
 
-// Schema for Creating products
+// Schema for Product model
 const Product = mongoose.model("Product", {
     id: {
         type: Number,
@@ -367,7 +371,7 @@ const Product = mongoose.model("Product", {
     }
 });
 
-// Add Product Endpoint (No changes needed here)
+// Add Product Endpoint
 app.post('/addproduct', async (req, res) => {
     let products = await Product.find({});
     let id;
@@ -395,9 +399,91 @@ app.post('/addproduct', async (req, res) => {
     });
 });
 
-// More APIs for removing product, getting all products, etc. remain unchanged
+// Remove Product Endpoint
+app.post('/removeproduct', async (req, res) => {
+    await Product.findOneAndDelete({ id: req.body.id });
+    res.json({
+        success: true,
+        name: req.body.name
+    });
+});
 
-// Middleware for fetching user (no changes required)
+// Get All Products
+app.get('/allproducts', async (req, res) => {
+    let products = await Product.find({});
+    res.send(products);
+});
+
+// Schema for User model
+const Users = mongoose.model('Users', {
+    name: {
+        type: String,
+    },
+    email: {
+        type: String,
+        unique: true,
+    },
+    password: {
+        type: String,
+    },
+    cartData: {
+        type: Object,
+    },
+    date: {
+        type: Date,
+        default: Date.now,
+    }
+});
+
+// Sign Up Endpoint
+app.post('/signup', async (req, res) => {
+    let check = await Users.findOne({ email: req.body.email });
+    if (check) {
+        return res.status(400).json({ success: false, errors: "Existing user already have account" });
+    }
+    let cart = {};
+    for (let i = 0; i < 300; i++) {
+        cart[i] = 0;
+    }
+    const user = new Users({
+        name: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+        cartData: cart,
+    });
+    await user.save();
+
+    const data = {
+        user: {
+            id: user.id
+        }
+    };
+    const token = jwt.sign(data, 'secret_ecom');
+    res.json({ success: true, token });
+});
+
+// Login Endpoint
+app.post('/login', async (req, res) => {
+    let user = await Users.findOne({ email: req.body.email });
+    if (user) {
+        const passCompare = req.body.password === user.password;
+        if (passCompare) {
+            const data = {
+                user: {
+                    id: user.id
+                }
+            };
+            const token = jwt.sign(data, 'secret_ecom');
+            res.json({ success: true, token });
+        } else {
+            res.json({ success: false, errors: 'Wrong Password' });
+        }
+    } else {
+        res.json({ success: false, errors: "Wrong Email Id" });
+    }
+});
+
+// Middleware for fetching user based on token
 const fetchUser = async (req, res, next) => {
     const token = req.header('auth-token');
     if (!token) {
@@ -413,7 +499,7 @@ const fetchUser = async (req, res, next) => {
     }
 };
 
-// API to add product to cart (No changes required)
+// Add to Cart Endpoint
 app.post('/addtocart', fetchUser, async (req, res) => {
     let userData = await Users.findOne({ _id: req.user.id });
     userData.cartData[req.body.itemId] += 1;
@@ -421,12 +507,24 @@ app.post('/addtocart', fetchUser, async (req, res) => {
     res.send('Added');
 });
 
-// Rest of your API endpoints (remove product, cart data) remain the same
-
-app.listen(port, (error) => {
-    if (!error) {
-        console.log("Server Running on port " + port);
-    } else {
-        console.log("Error : " + error);
-    }
+// Remove from Cart Endpoint
+app.post('/removefromcart', fetchUser, async (req, res) => {
+    let userData = await Users.findOne({ _id: req.user.id });
+    if (userData.cartData[req.body.itemId] > 0)
+        userData.cartData[req.body.itemId] -= 1;
+    await Users.findOneAndUpdate({ _id: req.user.id }, { cartData: userData.cartData });
+    res.send('Removed');
 });
+
+// Get Cart Data Endpoint
+app.post('/getcart', fetchUser, async (req, res) => {
+    let userData = await Users.findOne({ _id: req.user.id });
+    res.json(userData.cartData);
+});
+
+// Start the server
+const port = process.env.PORT || 4000;
+app.listen(port, () => {
+    console.log("Server running on port " + port);
+});
+
