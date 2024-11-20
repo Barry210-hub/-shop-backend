@@ -340,7 +340,7 @@ app.post('/upload', upload.single('product'), (req, res) => {
     // Return image URL
     res.json({
         success: 1,
-        image_url: `http://localhost:4000/images/${req.file.filename}`
+        image_url: `https://shop-backend-nu.vercel.app/images/${req.file.filename}`
     });
 });
 
