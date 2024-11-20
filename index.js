@@ -304,6 +304,12 @@ mongoose.connect("mongodb+srv://umarzafar49678:tnFd4aXn7BX5lllo@cluster1.bzyrj.m
     useUnifiedTopology: true
 });
 
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' https://vercel.live;");
+    next();
+});
+
+
 // Image Storage Engine (Updated to use /tmp directory in Vercel)
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
