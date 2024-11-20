@@ -1,4 +1,4 @@
-const port = "4000";
+const port = "https://shop-backend-nu.vercel.app";
 const express = require("express");
 const app = express();
 const mongoose = require('mongoose');
