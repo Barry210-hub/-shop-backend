@@ -298,7 +298,7 @@ const cors = require('cors');
 app.use(express.json());
 // app.use(cors());
 const corsOptions = {
-    origin: 'http://localhost:5173', // You can set this to your frontend URL if needed, e.g. 'https://your-frontend-url.com'
+    origin: ['http://localhost:5173','http://localhost:5174'], // You can set this to your frontend URL if needed, e.g. 'https://your-frontend-url.com'
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 };
