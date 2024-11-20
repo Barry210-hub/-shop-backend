@@ -296,8 +296,14 @@ const cors = require('cors');
 
 // Express Setup
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:5173', // You can set this to your frontend URL if needed, e.g. 'https://your-frontend-url.com'
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
 
+app.use(cors(corsOptions));
 // Database connection (MongoDB)
 mongoose.connect("mongodb+srv://umarzafar49678:tnFd4aXn7BX5lllo@cluster1.bzyrj.mongodb.net/E-commerence", {
     useNewUrlParser: true,
